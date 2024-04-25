@@ -1,0 +1,6 @@
+LIST_SPECIAL_ARG = "$@"
+SCRIPT_SPECIAL_ARG = "script::"
+EXPR_ARGS_INDICATOR = "$"
+EXPR_ARGS_REGEX = r"\$\d+"
+
+STRING_BLANK = ""
