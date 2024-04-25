@@ -1,13 +1,15 @@
-import datetime
-import os, sys
 import argparse
+import datetime
+import os
 import re
+import sys
 import traceback
-from constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK, VERSION
-from evaluator import build_lambda_head, build_lambda_body, build_lambda_args
+from functools import reduce
 from pydoc import locate
 from typing import Any, TextIO
-from functools import reduce
+
+from src.constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK, VERSION
+from src.evaluator import build_lambda_head, build_lambda_body, build_lambda_args
 
 
 def get_current_year():
@@ -134,7 +136,11 @@ def exec_lambda(options: argparse.Namespace) -> Any:
     return res
 
 
-def main(options: argparse.Namespace) -> int:
+def main(argv: list[str]) -> int:
+    __program__ = argv[0]
+    __args__ = argv[1:]
+    version(__args__)
+    options = parser.parse_args(__args__)
     try:
         __lambda_expr__ = options.expr[0]
         res: Any = None
@@ -183,13 +189,10 @@ def output(res: Any, out: TextIO):
 
 
 def version(args):
-    if '-v' in __args__ or '--version' in __args__:
+    if '-v' in args or '--version' in args:
         print(VERSION)
         exit(0)
 
+
 if __name__ == '__main__':
-    __program__ = sys.argv[0]
-    __args__ = sys.argv[1:]
-    version(__args__)
-    parsed_cmd = parser.parse_args(__args__)
-    exit(main(options=parsed_cmd))
+    exit(main(sys.argv))
