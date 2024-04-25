@@ -1,18 +1,16 @@
 import datetime
 import os, sys
 import argparse
+import re
 import traceback
 from evaluator import build_lambda_head, build_lambda_body, build_lambda_args
 from pydoc import locate
 from typing import Any, TextIO
+from functools import reduce
 
 
 def get_current_year():
     return datetime.datetime.now().year.real
-
-
-def getopt(argv):
-    return parser.parse_args(argv)
 
 
 parser = argparse.ArgumentParser(
@@ -22,14 +20,18 @@ parser = argparse.ArgumentParser(
     operations on file with arrays and list comprehension.
 
     Example on positional arguments: lambda \"$1 ** $2\" arg1 arg2
-    Example on list arguments: lambda \"$i + 2 for $i in $@\" arg1 arg2 ... argN''',
+    Example on list arguments: lambda \"$i + 2 for $i in $@\" arg1 arg2 ... argN
+    Example of reduction: lambda -r 0 -dt=int \"$1+$2\" arg1 arg2 ... argN''',
     formatter_class=argparse.RawTextHelpFormatter,
     epilog=f'Author: Gabriele Zigurella © {get_current_year()}')
 
 parser.add_argument('expr', metavar='EXPR', type=str, nargs=1,
                     help='Lambda expression or list comprehension expression to be applied')
-parser.add_argument('args', metavar='$A', type=str, nargs='?',
+parser.add_argument('args', metavar='$A', type=str, nargs='*',
                     help='Positional Arguments to be used during the lambda invocation')
+parser.add_argument('-r', '--reduce=', dest='reduce', action='store',
+                    nargs='?',
+                    help='If enabled it will apply to the given accumulator the lambda with the positional values')
 parser.add_argument('-D', '--debug', dest='debug', action='store_true',
                     help='It will output traceback errors on execution failure.')
 parser.add_argument('-dt', '--dtype=', dest='dtype', action='store',
@@ -46,6 +48,10 @@ parser.add_argument('-o', '--output=', dest='output', type=argparse.FileType('w'
                     help='Define the File from witch to read, each lines will be parsed into a list argument.')
 
 
+def search_number_of_lambda_args(expr: str) -> int:
+    return [int(match.replace('$', '')) for match in re.findall(r'\$\d', expr)][-1]
+
+
 def main(options: argparse.Namespace) -> int:
     try:
         __lambda_expr__ = parsed_cmd.expr[0]
@@ -53,10 +59,14 @@ def main(options: argparse.Namespace) -> int:
         res: Any
         argv_size = len(argv)
         if not ("$@" in __lambda_expr__):
+            n_of_args = search_number_of_lambda_args(__lambda_expr__)
             __lambda__ = eval(
-                build_lambda_head(argv_size, False) + build_lambda_body(__lambda_expr__, argv_size, False))
-            __args__ = build_lambda_args(argv, argv_size)
-            res = __lambda__(*argv)
+                build_lambda_head(n_of_args, False) + build_lambda_body(__lambda_expr__, n_of_args, False))
+            if options.reduce is not None:
+                res = reduce(__lambda__, argv, options.reduce)
+            else:
+                __args__ = build_lambda_args(argv, argv_size)
+                res = __lambda__(*argv)
         else:
             list_comprehension = build_lambda_body(__lambda_expr__, argv_size, True)
             res = eval(list_comprehension)
@@ -80,12 +90,15 @@ def lambda_input(options: argparse.Namespace):
                     for row in arg_matrix:
                         flat_list += row.split(options.delimiter)
                     return flat_list
+
                 options.args = flatten_concatenation(options.args)
     if not hasattr(options, 'dtype'):
         args = options.args
     else:
         dtype: object = locate(options.dtype[0])
         args = [dtype(arg) for arg in options.args]
+        if options.reduce is not None:
+            options.reduce = dtype(options.reduce)
     return args
 
 
@@ -99,5 +112,5 @@ def output(res: Any, out: TextIO):
 
 if __name__ == '__main__':
     __program__ = sys.argv[0]
-    parsed_cmd = getopt(sys.argv[1:])
+    parsed_cmd = parser.parse_args(sys.argv[1:])
     exit(main(options=parsed_cmd))
