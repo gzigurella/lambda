@@ -3,7 +3,7 @@ import os, sys
 import argparse
 import re
 import traceback
-from constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK
+from constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK, VERSION
 from evaluator import build_lambda_head, build_lambda_body, build_lambda_args
 from pydoc import locate
 from typing import Any, TextIO
@@ -49,6 +49,9 @@ parser.add_argument('-d', '--delim=', dest='delimiter', type=str, nargs='?',
 parser.add_argument('-o', '--output=', dest='output', type=argparse.FileType('w'),
                     nargs='?', default=sys.stdout,
                     help='Define the File to write at the end of the operation.')
+parser.add_argument('-v', '--version=', dest='version', action='store_true',
+                    default=False,
+                    help='Output current program version')
 
 
 def search_number_of_lambda_args(expr: str) -> int:
@@ -77,7 +80,6 @@ def exec_script(options: argparse.Namespace) -> Any:
             options.dtype = [type(options.args[0]).__name__]
 
 
-
 def exec_list_comprehension_lambda(expr: str, argv: list[Any]):
     """
     The eval searches the closest reference to 'argv' therefore finding the one in the function scope, and applies the
@@ -94,11 +96,11 @@ def exec_lambda_func(expr: str, argv: list[Any], reduce_initial_value: Any | Non
     """
     The eval searches the closest reference to 'argv' therefore finding the one in the function scope,
     and tries to apply the lambda expression to the elements from argv list.
+    Any exceeding argument is discarded.
     :param expr: the expression of the lambda function
     :param argv: the vector of the positional arguments
     :param reduce_initial_value: the (optional) initial value of the Reduction
     :return: the result of the applied lambda on the argv list
-    :raise TypeError if the list has the wrong number of arguments
     """
     n_of_args = search_number_of_lambda_args(expr)
     __lambda__ = eval(
@@ -110,7 +112,7 @@ def exec_lambda_func(expr: str, argv: list[Any], reduce_initial_value: Any | Non
         return reduce(__lambda__, argv, reduce_initial_value)
     else:
         __args__ = build_lambda_args(argv, len(argv))
-        return __lambda__(*argv)
+        return __lambda__(*argv[:n_of_args])
 
 
 def exec_lambda(options: argparse.Namespace) -> Any:
@@ -180,7 +182,14 @@ def output(res: Any, out: TextIO):
             file.write(f"{res}")
 
 
+def version(args):
+    if '-v' in __args__ or '--version' in __args__:
+        print(VERSION)
+        exit(0)
+
 if __name__ == '__main__':
     __program__ = sys.argv[0]
-    parsed_cmd = parser.parse_args(sys.argv[1:])
+    __args__ = sys.argv[1:]
+    version(__args__)
+    parsed_cmd = parser.parse_args(__args__)
     exit(main(options=parsed_cmd))
