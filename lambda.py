@@ -3,6 +3,7 @@ import os, sys
 import argparse
 import re
 import traceback
+from constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK
 from evaluator import build_lambda_head, build_lambda_body, build_lambda_args
 from pydoc import locate
 from typing import Any, TextIO
@@ -21,7 +22,9 @@ parser = argparse.ArgumentParser(
 
     Example on positional arguments: lambda \"$1 ** $2\" arg1 arg2
     Example on list arguments: lambda \"$i + 2 for $i in $@\" arg1 arg2 ... argN
-    Example of reduction: lambda -r 0 -dt=int \"$1+$2\" arg1 arg2 ... argN''',
+    Example of reduction: lambda -r 0 -dt=int \"$1+$2\" arg1 arg2 ... argN
+    Example of execution of external lambda script: lambda script::/absolute/path/to/script.lambda arg1 arg2 ... argN
+    ''',
     formatter_class=argparse.RawTextHelpFormatter,
     epilog=f'Author: Gabriele Zigurella © {get_current_year()}')
 
@@ -42,37 +45,104 @@ parser.add_argument('-f', '--filepath=', dest='source', type=argparse.FileType('
                     help='Define the File from witch to read, each lines will be parsed into a list argument.')
 parser.add_argument('-d', '--delim=', dest='delimiter', type=str, nargs='?',
                     help='''Combined with flag -f (or --filepath) allows to split each file line on given delimiter
-                         and treat each splitted value as an argument.''')
+                         and treat each split value as an argument.''')
 parser.add_argument('-o', '--output=', dest='output', type=argparse.FileType('w'),
                     nargs='?', default=sys.stdout,
-                    help='Define the File from witch to read, each lines will be parsed into a list argument.')
+                    help='Define the File to write at the end of the operation.')
 
 
 def search_number_of_lambda_args(expr: str) -> int:
-    return [int(match.replace('$', '')) for match in re.findall(r'\$\d', expr)][-1]
+    return [int(match.replace(EXPR_ARGS_INDICATOR, STRING_BLANK)) for match in re.findall(EXPR_ARGS_REGEX, expr)][-1]
+
+
+def exec_script(options: argparse.Namespace) -> Any:
+    """
+    Executes all lambda function defined inside a *.lambda file script, line by line.
+
+    :param options: the parsed arguments and options from the program invocation
+    :return: The result of the application of all the lambda functions described in the file script
+    """
+    expr = options.expr[0]
+    with open(expr.replace(SCRIPT_SPECIAL_ARG, STRING_BLANK)) as script:
+        expressions = [expr.strip() for expr in script.readlines()]
+        for idx, expr in enumerate(expressions):
+            options.expr = [expr]
+            if idx == len(expressions) - 1:
+                return exec_lambda(options)
+            # carry the last expression result as argument for the next one
+            options.args = [exec_lambda(options)]
+            # reset reduction initial value
+            options.reduce = None
+            # reset data type based on result
+            options.dtype = [type(options.args[0]).__name__]
+
+
+
+def exec_list_comprehension_lambda(expr: str, argv: list[Any]):
+    """
+    The eval searches the closest reference to 'argv' therefore finding the one in the function scope, and applies the
+    expression to each element of the list.
+    :param expr: The List Comprehension Expression to apply
+    :param argv: The List onto apply the function
+    :return:
+    """
+    list_comprehension = build_lambda_body(expr, None, True)
+    return eval(list_comprehension)
+
+
+def exec_lambda_func(expr: str, argv: list[Any], reduce_initial_value: Any | None):
+    """
+    The eval searches the closest reference to 'argv' therefore finding the one in the function scope,
+    and tries to apply the lambda expression to the elements from argv list.
+    :param expr: the expression of the lambda function
+    :param argv: the vector of the positional arguments
+    :param reduce_initial_value: the (optional) initial value of the Reduction
+    :return: the result of the applied lambda on the argv list
+    :raise TypeError if the list has the wrong number of arguments
+    """
+    n_of_args = search_number_of_lambda_args(expr)
+    __lambda__ = eval(
+        build_lambda_head(n_of_args, False)
+        +
+        build_lambda_body(expr, n_of_args, False)
+    )
+    if reduce_initial_value is not None:
+        return reduce(__lambda__, argv, reduce_initial_value)
+    else:
+        __args__ = build_lambda_args(argv, len(argv))
+        return __lambda__(*argv)
+
+
+def exec_lambda(options: argparse.Namespace) -> Any:
+    """
+    The Program decision Behaviour function,
+    it chooses between the lambda function evaluation and the list comprehension one.
+    :param options: The list of arguments and options parsed from the program invocation
+    :return: the result of the applied expressions parsed from the system arguments vector
+    """
+    res: Any
+    # Get Lambda Expression
+    __lambda_expr__ = options.expr[0]
+    # Parse arguments vector
+    argv = lambda_input(options)
+    if LIST_SPECIAL_ARG not in __lambda_expr__:
+        res = exec_lambda_func(__lambda_expr__, argv, options.reduce)
+    else:
+        res = exec_list_comprehension_lambda(__lambda_expr__, argv)
+    return res
 
 
 def main(options: argparse.Namespace) -> int:
     try:
-        __lambda_expr__ = parsed_cmd.expr[0]
-        argv = lambda_input(options)
-        res: Any
-        argv_size = len(argv)
-        if not ("$@" in __lambda_expr__):
-            n_of_args = search_number_of_lambda_args(__lambda_expr__)
-            __lambda__ = eval(
-                build_lambda_head(n_of_args, False) + build_lambda_body(__lambda_expr__, n_of_args, False))
-            if options.reduce is not None:
-                res = reduce(__lambda__, argv, options.reduce)
-            else:
-                __args__ = build_lambda_args(argv, argv_size)
-                res = __lambda__(*argv)
+        __lambda_expr__ = options.expr[0]
+        res: Any = None
+        if SCRIPT_SPECIAL_ARG in __lambda_expr__:
+            res = exec_script(options)
         else:
-            list_comprehension = build_lambda_body(__lambda_expr__, argv_size, True)
-            res = eval(list_comprehension)
+            res = exec_lambda(options)
         output(res, options.output)
     except Exception as e:
-        if hasattr(options, 'debug'):
+        if options.debug:
             traceback.print_exc()
         print(os.strerror(32), e)
         return 32
@@ -84,7 +154,7 @@ def lambda_input(options: argparse.Namespace):
     if options.source != sys.stdin:
         with open(options.source.name) as file:
             options.args = [line.strip() for line in file]
-            if hasattr(options, "delimiter"):
+            if options.delimiter is not None:
                 def flatten_concatenation(arg_matrix):
                     flat_list = []
                     for row in arg_matrix:
@@ -92,7 +162,7 @@ def lambda_input(options: argparse.Namespace):
                     return flat_list
 
                 options.args = flatten_concatenation(options.args)
-    if not hasattr(options, 'dtype'):
+    if options.dtype == 'str':
         args = options.args
     else:
         dtype: object = locate(options.dtype[0])
