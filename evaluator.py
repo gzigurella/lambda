@@ -14,7 +14,7 @@ def build_lambda_head(argv_size: int, args_as_list: bool = False) -> str:
     return lmbd
 
 
-def build_lambda_body(expr: str, argv_size: int, args_as_list: bool = False) -> str:
+def build_lambda_body(expr: str, argv_size: int | None, args_as_list: bool = False) -> str:
     if args_as_list:
         expr = re.sub(r"\$i", "y", expr)
         expr = re.sub(r"\$@", "argv", expr)
