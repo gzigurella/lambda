@@ -1,4 +1,4 @@
-#λ
+# λ
 
 λ -- pronounced Lambda -- is a small interpreter for Pythonic Lambda functions and List Comprehension.
 
