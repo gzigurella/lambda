@@ -16,12 +16,12 @@ def build_lambda_head(argv_size: int, args_as_list: bool = False) -> str:
 
 def build_lambda_body(expr: str, argv_size: int | None, args_as_list: bool = False) -> str:
     if args_as_list:
-        expr = re.sub(r"\$i", "y", expr)
-        expr = re.sub(r"\$@", "argv", expr)
+        expr = re.sub(r"#i", "y", expr)
+        expr = re.sub(r"#\?", "argv", expr)
         return f"[{expr}]"
     else:
         for idx in range(argv_size):
-            replaced_arg = f"\\${idx + 1}"
+            replaced_arg = f"\\#{idx + 1}"
             replace_value = f"_arg{idx}"
             expr = re.sub(replaced_arg, replace_value, expr)
     return expr

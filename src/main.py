@@ -23,17 +23,17 @@ parser = ArgumentParser(
     Execute python lambda's body expression on positional arguments or 
     operations on file with arrays and list comprehension.
 
-    Example on positional arguments: lambda \"$1 ** $2\" arg1 arg2
-    Example on list arguments: lambda \"$i + 2 for $i in $@\" arg1 arg2 ... argN
-    Example of reduction: lambda -r 0 -dt=int \"$1+$2\" arg1 arg2 ... argN
-    Example of execution of external lambda script: lambda script::/absolute/path/to/script.lambda arg1 arg2 ... argN
+    Example on positional arguments: lambda \"#1 ** #2\" arg1 arg2
+    Example on list arguments: lambda \"#i + 2 for #i in #?\" arg1 arg2 ... argN
+    Example of reduction: lambda -r 0 -dt=int \"#1+#2\" arg1 arg2 ... argN
+    Example of execution of external lambda script: lambda #script::/absolute/path/to/script.lambda arg1 arg2 ... argN
     ''',
     formatter_class=RawTextHelpFormatter,
     epilog=f'Author: Gabriele Zigurella © {get_current_year()}')
 
 parser.add_argument('expr', metavar='EXPR', type=str, nargs=1,
                     help='Lambda expression or list comprehension expression to be applied')
-parser.add_argument('args', metavar='$A', type=str, nargs='*',
+parser.add_argument('args', metavar='@A', type=str, nargs='*',
                     help='Positional Arguments to be used during the lambda invocation')
 parser.add_argument('-r', '--reduce=', dest='reduce', action='store',
                     nargs='?',
@@ -144,6 +144,8 @@ def main(argv: list[str]) -> (int, str):
     if version(__args__):
         return 0
     options = parser.parse_args(__args__)
+    if options.debug:
+        print(f"### PARSED OPTIONS AND ARGUMENTS\n\n{options}\n\n###")
     try:
         __lambda_expr__ = options.expr[0]
         res: Any = None
@@ -152,14 +154,14 @@ def main(argv: list[str]) -> (int, str):
         else:
             res = exec_lambda(options)
         output(res, options.output)
-    except ValueError:
+    except (ValueError, TypeError):
         if options.debug:
             print_exc()
         return ERRNO['Invalid Argument'], "Either wrong argument type or missing a --dtype flag."
     except RuntimeError:
         if options.debug:
             print_exc()
-        return ERRNO['Generic Error'], "An error occurred during the execution, please re-run it with -D flag enabled to see what's wrong."
+        return ERRNO['Generic Error'], "An unknown error occurred during the execution, please re-run it with -D flag enabled to see what's wrong."
     return 0, None
 
 
@@ -187,11 +189,14 @@ def lambda_input(options: Namespace):
 
 
 def output(res: Any, out: TextIO):
+    echo = f"{res}"
+    if isinstance(res, list):
+        echo = "\n".join([val.strip() for val in f"{res}".replace('[', STRING_BLANK).replace(']', STRING_BLANK).split(',')])
     if out == stdout:
-        print(res)
+        print(echo)
     else:
         with open(out.name, 'w') as file:
-            file.write(f"{res}")
+            file.write(echo)
 
 
 def version(args: list[str]) -> bool:
@@ -204,4 +209,4 @@ def version(args: list[str]) -> bool:
 if __name__ == '__main__':
     exit_code, message = main(sys_argv)
     if exit_code != 0:
-        print(strerror(exit_code), )
+        print(strerror(exit_code), message)

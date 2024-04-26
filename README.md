@@ -28,7 +28,7 @@ TODO
 ##### Lambda Functions
 You start by typing *lambda* to invoke the program, followed by any option flag, then the required parameters.
 ```bash
-lambda "$1 ** $2" 2 3 4
+lambda "#1 ** #2" 2 3 4
 ```
 The output is the same of applying in a python script the following code, extra arguments are automatically discarded.
 ```python
@@ -39,9 +39,9 @@ result = fun(2, 3)
 ##### List Comprehension
 You start by typing *lambda* to invoke the program, followed by any option flag -- in the following example we use `--dtype` to tell what type to use for the arguments, otherwise they are treated as python **str** type by default, then the required parameters as usual.
 
-To tell the program we want to treat the args as a List and not individually we must use the `$@` inside the function and `$i` as the current iterated element of the list.
+To tell the program we want to treat the args as a List and not individually we must use the `#@` inside the function and `#i` as the current iterated element of the list.
 ```bash
-lambda --dtype=int "$i + 2 for $i in $@"  1 2 10 25
+lambda --dtype=int "#i + 2 for #i in #?"  1 2 10 25
 ```
 
 The output is the same of applying in a python script the following code
@@ -54,7 +54,7 @@ result = [x + 2 for x in args]
 You start by typing *lambda* to invoke the program, followed by the `-r`flag to enable the *reduce* chain and the initial value.
 Then we can insert option flags -- in the following example we use `-dt` which is the short version of `--dtype` to tell what type to use for the arguments.
 ```bash
-lambda -r 0 -dt=int "$1+$2" 1 7 13 29
+lambda -r 0 -dt=int "#1+#2" 1 7 13 29
 ```
 
 The output is the same of applying in a python script the following code
@@ -71,9 +71,9 @@ Consider we want to apply a series of lambda expressions, carrying the result of
 We start by defining the series of lambda expressions in a file, line by line.
 For example here is how to apply the formula from the Pythagorean Theorem
 ```python
-$1**2 + $2**2
-$1**0.5
-str($1)+' is the result of the applied Pythagorean Formula'
+#1**2 + #2**2
+#1**0.5
+str(#1)+' is the result of the applied Pythagorean Formula'
 ```
 
 Then we can pass it the invocation of the lambda program.
