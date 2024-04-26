@@ -20,7 +20,11 @@ The code is released under MIT License
 ---
 
 ### Installation
-TODO
+1. Clone the repository
+2. Go inside the cloned `Lambda` directory and open here a Terminal
+3. Make sure you can run the build-script with `chmod+x build.sh`
+4. Run the script by typing `./build.sh` in your terminal
+5. Move the compiled binary `lambda` under `/usr/local/bin` 
 
 ---
 
