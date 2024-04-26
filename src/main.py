@@ -7,6 +7,7 @@ from traceback import print_exc
 from functools import reduce
 from pydoc import locate
 from typing import Any, TextIO
+from importlib import import_module
 
 from src.constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK, \
     VERSION, ERRNO, OPEN_SQUARE_BRACKET, CLOSE_SQUARE_BRACKET, COMMA, NEWLINE
@@ -43,6 +44,9 @@ parser.add_argument('-D', '--debug', dest='debug', action='store_true',
 parser.add_argument('-dt', '--dtype=', dest='dtype', action='store',
                     default='str', nargs=1,
                     help='Define the type of the positional arguments, if omitted they will be treated as strings.')
+parser.add_argument('-m', '--module=', dest='module', action='append',
+                    nargs='*', type=str,
+                    help='Add module to use it in the expression.')
 parser.add_argument('-f', '--filepath=', dest='source', type=FileType('r'),
                     nargs='?', default=stdin,
                     help='Define the File from witch to read, each lines will be parsed into a list argument.')
@@ -148,6 +152,10 @@ def main(argv: list[str]) -> (int, str):
         print(f"### PARSED OPTIONS AND ARGUMENTS\n\n{options}\n\n###")
     try:
         __lambda_expr__ = options.expr[0]
+        if options.module is not None:
+            options.module = flatten(options.module)
+            for m in options.module:
+                globals()[m] = import_module(m)
         res: Any = None
         if SCRIPT_SPECIAL_ARG in __lambda_expr__:
             res = exec_script(options)
@@ -161,8 +169,16 @@ def main(argv: list[str]) -> (int, str):
     except RuntimeError:
         if options.debug:
             print_exc()
-        return ERRNO['Generic Error'], "An unknown error occurred during the execution, please re-run it with -D flag enabled to see what's wrong."
+        return ERRNO[
+            'Generic Error'], "An unknown error occurred during the execution, please re-run it with -D flag enabled to see what's wrong."
     return 0, None
+
+
+def flatten(arg_matrix, delimiter=None):
+    flat_list = []
+    for row in arg_matrix:
+        flat_list += row.split(delimiter) if delimiter is not None else row
+    return flat_list
 
 
 def lambda_input(options: Namespace):
@@ -171,13 +187,7 @@ def lambda_input(options: Namespace):
         with open(options.source.name) as file:
             options.args = [line.strip() for line in file]
             if options.delimiter is not None:
-                def flatten_concatenation(arg_matrix):
-                    flat_list = []
-                    for row in arg_matrix:
-                        flat_list += row.split(options.delimiter)
-                    return flat_list
-
-                options.args = flatten_concatenation(options.args)
+                options.args = flatten(options.args, options.delimiter)
     if options.dtype == 'str':
         args = options.args
     else:
@@ -191,7 +201,9 @@ def lambda_input(options: Namespace):
 def output(res: Any, out: TextIO):
     echo = f"{res}"
     if isinstance(res, list):
-        echo = NEWLINE.join([val.strip() for val in f"{res}".replace(OPEN_SQUARE_BRACKET, STRING_BLANK).replace(CLOSE_SQUARE_BRACKET, STRING_BLANK).split(COMMA)])
+        echo = NEWLINE.join([val.strip() for val in
+                             f"{res}".replace(OPEN_SQUARE_BRACKET, STRING_BLANK).replace(CLOSE_SQUARE_BRACKET,
+                                                                                         STRING_BLANK).split(COMMA)])
     if out == stdout:
         print(echo)
     else:
