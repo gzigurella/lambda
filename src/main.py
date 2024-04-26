@@ -1,22 +1,23 @@
-import argparse
-import datetime
-import os
-import re
-import sys
-import traceback
+from argparse import ArgumentParser, RawTextHelpFormatter, FileType, Namespace
+from datetime import datetime
+from os import strerror
+from re import findall
+from sys import argv as sys_argv, stdout, stdin
+from traceback import print_exc
 from functools import reduce
 from pydoc import locate
 from typing import Any, TextIO
 
-from src.constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK, VERSION
+from src.constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK, \
+    VERSION, ERRNO
 from src.evaluator import build_lambda_head, build_lambda_body, build_lambda_args
 
 
 def get_current_year():
-    return datetime.datetime.now().year.real
+    return datetime.now().year.real
 
 
-parser = argparse.ArgumentParser(
+parser = ArgumentParser(
     prog='lambda',
     description='''description:
     Execute python lambda's body expression on positional arguments or 
@@ -27,7 +28,7 @@ parser = argparse.ArgumentParser(
     Example of reduction: lambda -r 0 -dt=int \"$1+$2\" arg1 arg2 ... argN
     Example of execution of external lambda script: lambda script::/absolute/path/to/script.lambda arg1 arg2 ... argN
     ''',
-    formatter_class=argparse.RawTextHelpFormatter,
+    formatter_class=RawTextHelpFormatter,
     epilog=f'Author: Gabriele Zigurella © {get_current_year()}')
 
 parser.add_argument('expr', metavar='EXPR', type=str, nargs=1,
@@ -42,14 +43,14 @@ parser.add_argument('-D', '--debug', dest='debug', action='store_true',
 parser.add_argument('-dt', '--dtype=', dest='dtype', action='store',
                     default='str', nargs=1,
                     help='Define the type of the positional arguments, if omitted they will be treated as strings.')
-parser.add_argument('-f', '--filepath=', dest='source', type=argparse.FileType('r'),
-                    nargs='?', default=sys.stdin,
+parser.add_argument('-f', '--filepath=', dest='source', type=FileType('r'),
+                    nargs='?', default=stdin,
                     help='Define the File from witch to read, each lines will be parsed into a list argument.')
 parser.add_argument('-d', '--delim=', dest='delimiter', type=str, nargs='?',
                     help='''Combined with flag -f (or --filepath) allows to split each file line on given delimiter
                          and treat each split value as an argument.''')
-parser.add_argument('-o', '--output=', dest='output', type=argparse.FileType('w'),
-                    nargs='?', default=sys.stdout,
+parser.add_argument('-o', '--output=', dest='output', type=FileType('w'),
+                    nargs='?', default=stdout,
                     help='Define the File to write at the end of the operation.')
 parser.add_argument('-v', '--version=', dest='version', action='store_true',
                     default=False,
@@ -57,10 +58,10 @@ parser.add_argument('-v', '--version=', dest='version', action='store_true',
 
 
 def search_number_of_lambda_args(expr: str) -> int:
-    return [int(match.replace(EXPR_ARGS_INDICATOR, STRING_BLANK)) for match in re.findall(EXPR_ARGS_REGEX, expr)][-1]
+    return [int(match.replace(EXPR_ARGS_INDICATOR, STRING_BLANK)) for match in findall(EXPR_ARGS_REGEX, expr)][-1]
 
 
-def exec_script(options: argparse.Namespace) -> Any:
+def exec_script(options: Namespace) -> Any:
     """
     Executes all lambda function defined inside a *.lambda file script, line by line.
 
@@ -117,7 +118,7 @@ def exec_lambda_func(expr: str, argv: list[Any], reduce_initial_value: Any | Non
         return __lambda__(*argv[:n_of_args])
 
 
-def exec_lambda(options: argparse.Namespace) -> Any:
+def exec_lambda(options: Namespace) -> Any:
     """
     The Program decision Behaviour function,
     it chooses between the lambda function evaluation and the list comprehension one.
@@ -136,10 +137,12 @@ def exec_lambda(options: argparse.Namespace) -> Any:
     return res
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str]) -> (int, str):
     __program__ = argv[0]
     __args__ = argv[1:]
-    version(__args__)
+    # If we receive the version flag skip the rest of the program
+    if version(__args__):
+        return 0
     options = parser.parse_args(__args__)
     try:
         __lambda_expr__ = options.expr[0]
@@ -149,17 +152,20 @@ def main(argv: list[str]) -> int:
         else:
             res = exec_lambda(options)
         output(res, options.output)
-    except Exception as e:
+    except ValueError:
         if options.debug:
-            traceback.print_exc()
-        print(os.strerror(32), e)
-        return 32
-    return 0
+            print_exc()
+        return ERRNO['Invalid Argument'], "Either wrong argument type or missing a --dtype flag."
+    except RuntimeError:
+        if options.debug:
+            print_exc()
+        return ERRNO['Generic Error'], "An error occurred during the execution, please re-run it with -D flag enabled to see what's wrong."
+    return 0, None
 
 
-def lambda_input(options: argparse.Namespace):
+def lambda_input(options: Namespace):
     args: Any
-    if options.source != sys.stdin:
+    if options.source != stdin:
         with open(options.source.name) as file:
             options.args = [line.strip() for line in file]
             if options.delimiter is not None:
@@ -181,18 +187,21 @@ def lambda_input(options: argparse.Namespace):
 
 
 def output(res: Any, out: TextIO):
-    if out == sys.stdout:
+    if out == stdout:
         print(res)
     else:
         with open(out.name, 'w') as file:
             file.write(f"{res}")
 
 
-def version(args):
+def version(args: list[str]) -> bool:
     if '-v' in args or '--version' in args:
         print(VERSION)
-        exit(0)
+        return True
+    return False
 
 
 if __name__ == '__main__':
-    exit(main(sys.argv))
+    exit_code, message = main(sys_argv)
+    if exit_code != 0:
+        print(strerror(exit_code), )
