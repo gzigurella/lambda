@@ -9,7 +9,7 @@ from pydoc import locate
 from typing import Any, TextIO
 
 from src.constants import LIST_SPECIAL_ARG, SCRIPT_SPECIAL_ARG, EXPR_ARGS_REGEX, EXPR_ARGS_INDICATOR, STRING_BLANK, \
-    VERSION, ERRNO
+    VERSION, ERRNO, OPEN_SQUARE_BRACKET, CLOSE_SQUARE_BRACKET, COMMA, NEWLINE
 from src.evaluator import build_lambda_head, build_lambda_body, build_lambda_args
 
 
@@ -191,7 +191,7 @@ def lambda_input(options: Namespace):
 def output(res: Any, out: TextIO):
     echo = f"{res}"
     if isinstance(res, list):
-        echo = "\n".join([val.strip() for val in f"{res}".replace('[', STRING_BLANK).replace(']', STRING_BLANK).split(',')])
+        echo = NEWLINE.join([val.strip() for val in f"{res}".replace(OPEN_SQUARE_BRACKET, STRING_BLANK).replace(CLOSE_SQUARE_BRACKET, STRING_BLANK).split(COMMA)])
     if out == stdout:
         print(echo)
     else:
