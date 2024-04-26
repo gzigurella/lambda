@@ -30,3 +30,7 @@ def test_lambda_script():
     script = os.path.abspath("./text.lambda")
     exit_code, msg = entrypoint(shellsplit(f'lambda -D --dtype=int script::{script} 2 4'))
     assert exit_code == 0 and msg is None
+
+def test_import_module():
+    exit_code, msg = entrypoint(shellsplit(f'-D --dtype=int --module=numpy "#i+numpy.random.default_rng().random() for #i in #?" 1 2 3 4 5 6 7 9 0'))
+    assert exit_code == 0 and msg is None
