@@ -102,6 +102,20 @@ Adding the `--module=[MODULE]` flag will allow to import at runtime the module `
 For example if we define `--module=numpy` we will be able to use everything inside `numpy` like for example `numpy.random.default_rng().random()` to generate a random number inside our expression.
 
 There is no limit to the number of times you can add `--module=[MODULE]` flag.
+
+A small example:
+```bash
+lambda -D --dtype=int --module=math "#i+math.pi for #i in #?" 1 2 3 4 5 6 7 9 0
+```
+
+will return the output of:
+
+```python
+import math
+args = [1, 2, 3, 4, 5, 6, 7, 9, 0]
+result = [x+math.pi for x in args]
+```
+
 ---
 
 ### How to contribute
