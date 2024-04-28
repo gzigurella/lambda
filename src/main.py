@@ -30,7 +30,7 @@ parser = ArgumentParser(
     Example of execution of external lambda script: lambda #script::/absolute/path/to/script.lambda arg1 arg2 ... argN
     ''',
     formatter_class=RawTextHelpFormatter,
-    epilog=f'BUILD {get_current_year()} v{VERSION}')
+    epilog=f'BUILD {get_current_year()}v{VERSION}')
 
 parser.add_argument('expr', metavar='EXPR', type=str, nargs=1,
                     help='Lambda expression or list comprehension expression to be applied')
@@ -44,9 +44,9 @@ parser.add_argument('--debug', dest='debug', action='store_true',
 parser.add_argument('-dt', '--dtype=', dest='dtype', action='store',
                     default='str', nargs=1,
                     help='Define the type of the positional arguments, if omitted they will be treated as strings.')
-parser.add_argument('--module=', dest='module', action='append',
-                    nargs='*', type=str,
-                    help='Add module to use it in the expression.')
+parser.add_argument('--module=', dest='module',
+                    nargs='*', type=(lambda mods: [module.strip() for module in mods.split(',')]),
+                    help='Add module to use it in the expression. You can pass multiple modules comma separated.')
 parser.add_argument('-f', '--filepath=', dest='source', type=FileType('r'),
                     nargs='?', default=stdin,
                     help='Define the File from witch to read, each lines will be parsed into a list argument.')

@@ -101,7 +101,7 @@ Some notes about using custom scripts:
 Adding the `--module=[MODULE]` flag will allow to import at runtime the module `MODULE`.
 For example if we define `--module=numpy` we will be able to use everything inside `numpy` like for example `numpy.random.default_rng().random()` to generate a random number inside our expression.
 
-There is no limit to the number of times you can add `--module=[MODULE]` flag.
+To add multiple modules use the following syntax `--module="MODULE1,MODULE2..."`
 
 A small example:
 ```bash
