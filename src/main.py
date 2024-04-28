@@ -39,24 +39,24 @@ parser.add_argument('args', metavar='@A', type=str, nargs='*',
 parser.add_argument('-r', '--reduce=', dest='reduce', action='store',
                     nargs='?',
                     help='If enabled it will apply to the given accumulator the lambda with the positional values')
-parser.add_argument('-D', '--debug', dest='debug', action='store_true',
+parser.add_argument('--debug', dest='debug', action='store_true',
                     help='It will output traceback errors on execution failure.')
 parser.add_argument('-dt', '--dtype=', dest='dtype', action='store',
                     default='str', nargs=1,
                     help='Define the type of the positional arguments, if omitted they will be treated as strings.')
-parser.add_argument('-m', '--module=', dest='module', action='append',
+parser.add_argument('--module=', dest='module', action='append',
                     nargs='*', type=str,
                     help='Add module to use it in the expression.')
 parser.add_argument('-f', '--filepath=', dest='source', type=FileType('r'),
                     nargs='?', default=stdin,
                     help='Define the File from witch to read, each lines will be parsed into a list argument.')
-parser.add_argument('-d', '--delim=', dest='delimiter', type=str, nargs='?',
+parser.add_argument('--delim=', dest='delimiter', type=str, nargs='?',
                     help='''Combined with flag -f (or --filepath) allows to split each file line on given delimiter
                          and treat each split value as an argument.''')
 parser.add_argument('-o', '--output=', dest='output', type=FileType('w'),
                     nargs='?', default=stdout,
                     help='Define the File to write at the end of the operation.')
-parser.add_argument('-v', '--version=', dest='version', action='store_true',
+parser.add_argument('-v', '--version', dest='version', action='store_true',
                     default=False,
                     help='Output current program version')
 
