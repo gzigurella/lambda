@@ -30,7 +30,7 @@ parser = ArgumentParser(
     Example of execution of external lambda script: lambda #script::/absolute/path/to/script.lambda arg1 arg2 ... argN
     ''',
     formatter_class=RawTextHelpFormatter,
-    epilog=f'Author: Gabriele Zigurella © {get_current_year()}')
+    epilog=f'BUILD {get_current_year()} v{VERSION}')
 
 parser.add_argument('expr', metavar='EXPR', type=str, nargs=1,
                     help='Lambda expression or list comprehension expression to be applied')
