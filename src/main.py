@@ -202,8 +202,11 @@ def output(res: Any, out: TextIO):
     echo = f"{res}"
     if isinstance(res, list):
         echo = NEWLINE.join([val.strip() for val in
-                             f"{res}".replace(OPEN_SQUARE_BRACKET, STRING_BLANK).replace(CLOSE_SQUARE_BRACKET,
-                                                                                         STRING_BLANK).split(COMMA)])
+                             f"{res}"
+                                .replace(OPEN_SQUARE_BRACKET, STRING_BLANK)
+                                .replace(CLOSE_SQUARE_BRACKET,STRING_BLANK)
+                                .split(COMMA)
+                             ])
     if out == stdout:
         print(echo)
     else:
