@@ -43,7 +43,7 @@ result = fun(2, 3)
 ##### List Comprehension
 You start by typing *lambda* to invoke the program, followed by any option flag -- in the following example we use `--dtype` to tell what type to use for the arguments, otherwise they are treated as python **str** type by default, then the required parameters as usual.
 
-To tell the program we want to treat the args as a List and not individually we must use the `#@` inside the function and `#i` as the current iterated element of the list.
+To tell the program we want to treat the args as a List and not individually we must use the `#?` inside the function and `#i` as the current iterated element of the list.
 ```bash
 lambda --dtype=int "#i + 2 for #i in #?"  1 2 10 25
 ```
